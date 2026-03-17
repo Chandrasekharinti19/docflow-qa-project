@@ -62,3 +62,29 @@ DocFlow is a portfolio project designed to simulate an enterprise document workf
 
 \- Regression testing
 
+## Database Schema
+
+\- users
+
+\- documents
+
+\- audit\_logs
+
+
+
+\## Seed Users
+
+\- admin@test.com
+
+\- editor@test.com
+
+\- reviewer@test.com
+
+\- viewer@test.com
+
+
+
+Password for local development:
+
+\- Password123
+
