@@ -4,6 +4,8 @@ import {
   fetchDocumentById,
   fetchReviewers,
   assignReviewer,
+  approveDocument,
+  rejectDocument,
 } from "../services/documentService";
 
 function DocumentDetailsPage() {
@@ -14,6 +16,7 @@ function DocumentDetailsPage() {
   const [document, setDocument] = useState(null);
   const [reviewers, setReviewers] = useState([]);
   const [selectedReviewer, setSelectedReviewer] = useState("");
+  const [rejectionNotes, setRejectionNotes] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -54,9 +57,42 @@ function DocumentDetailsPage() {
     }
   };
 
+  const handleApprove = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const data = await approveDocument(id, user.email);
+      setSuccessMessage(data.message);
+      setDocument(data.document);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
+  const handleReject = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const data = await rejectDocument(id, user.email, rejectionNotes);
+      setSuccessMessage(data.message);
+      setDocument(data.document);
+      setRejectionNotes("");
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
   const handleBack = () => {
     navigate("/documents");
   };
+
+  const canAssignReviewer = user.role === "Admin" || user.role === "Editor";
+  const canReview =
+    user.role === "Reviewer" &&
+    document?.reviewer_email === user.email &&
+    document?.status === "Pending";
 
   if (!document) {
     return (
@@ -87,7 +123,7 @@ function DocumentDetailsPage() {
         <p data-testid="document-version">Version: {document.version}</p>
       </div>
 
-      {(user.role === "Admin" || user.role === "Editor") && (
+      {canAssignReviewer && (
         <div style={{ marginTop: "24px" }}>
           <h2>Assign Reviewer</h2>
 
@@ -114,8 +150,44 @@ function DocumentDetailsPage() {
         </div>
       )}
 
+      {canReview && (
+        <div style={{ marginTop: "24px" }}>
+          <h2>Review Actions</h2>
+
+          <button
+            data-testid="approve-document-button"
+            onClick={handleApprove}
+            style={{ marginRight: "12px" }}
+          >
+            Approve
+          </button>
+
+          <div style={{ marginTop: "16px" }}>
+            <textarea
+              data-testid="reject-notes-input"
+              placeholder="Enter rejection notes"
+              value={rejectionNotes}
+              onChange={(e) => setRejectionNotes(e.target.value)}
+              rows="4"
+              style={{ width: "100%", maxWidth: "500px", padding: "8px" }}
+            />
+          </div>
+
+          <button
+            data-testid="reject-document-button"
+            onClick={handleReject}
+            style={{ marginTop: "12px" }}
+          >
+            Reject
+          </button>
+        </div>
+      )}
+
       {errorMessage && (
-        <p data-testid="document-details-error" style={{ color: "red", marginTop: "16px" }}>
+        <p
+          data-testid="document-details-error"
+          style={{ color: "red", marginTop: "16px" }}
+        >
           {errorMessage}
         </p>
       )}
