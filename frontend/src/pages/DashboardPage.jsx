@@ -9,6 +9,10 @@ function DashboardPage() {
     navigate("/");
   };
 
+  const handleGoToDocuments = () => {
+    navigate("/documents");
+  };
+
   return (
     <div style={{ padding: "24px", fontFamily: "Arial" }}>
       <h1 data-testid="dashboard-title">DocFlow Dashboard</h1>
@@ -18,6 +22,15 @@ function DashboardPage() {
           <p data-testid="user-name">Name: {user.name}</p>
           <p data-testid="user-email">Email: {user.email}</p>
           <p data-testid="user-role">Role: {user.role}</p>
+
+          <button
+            data-testid="go-documents-button"
+            onClick={handleGoToDocuments}
+            style={{ marginRight: "12px" }}
+          >
+            Go to Documents
+          </button>
+
           <button data-testid="logout-button" onClick={handleLogout}>
             Logout
           </button>

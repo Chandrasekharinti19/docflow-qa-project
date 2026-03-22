@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import DocumentsPage from "./pages/DocumentsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -8,6 +9,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+
         <Route
           path="/dashboard"
           element={
@@ -16,6 +18,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
