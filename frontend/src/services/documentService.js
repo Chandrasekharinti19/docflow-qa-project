@@ -105,3 +105,14 @@ export async function rejectDocument(id, actorEmail, notes) {
 
   return data;
 }
+
+export async function fetchDocumentAuditLogs(id) {
+  const response = await fetch(`http://localhost:5000/api/documents/${id}/audit-logs`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch audit logs");
+  }
+
+  return data;
+}

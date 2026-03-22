@@ -288,6 +288,36 @@ const rejectDocument = async (req, res) => {
   }
 };
 
+const getDocumentAuditLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const documentCheck = await pool.query(
+      `SELECT id FROM documents WHERE id = $1`,
+      [id]
+    );
+
+    if (documentCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const result = await pool.query(
+      `SELECT id, document_id, action, actor_email, notes, created_at
+       FROM audit_logs
+       WHERE document_id = $1
+       ORDER BY created_at DESC, id DESC`,
+      [id]
+    );
+
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch audit logs",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllDocuments,
   createDocument,
@@ -296,4 +326,6 @@ module.exports = {
   getReviewers,
   approveDocument,
   rejectDocument,
+  getDocumentAuditLogs,
+
 };

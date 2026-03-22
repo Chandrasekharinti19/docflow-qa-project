@@ -6,6 +6,7 @@ import {
   assignReviewer,
   approveDocument,
   rejectDocument,
+  fetchDocumentAuditLogs,
 } from "../services/documentService";
 
 function DocumentDetailsPage() {
@@ -15,6 +16,7 @@ function DocumentDetailsPage() {
 
   const [document, setDocument] = useState(null);
   const [reviewers, setReviewers] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [selectedReviewer, setSelectedReviewer] = useState("");
   const [rejectionNotes, setRejectionNotes] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -39,10 +41,25 @@ function DocumentDetailsPage() {
     }
   };
 
+  const loadAuditLogs = async () => {
+    try {
+      const data = await fetchDocumentAuditLogs(id);
+      setAuditLogs(data);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
   useEffect(() => {
     loadDocument();
     loadReviewers();
+    loadAuditLogs();
   }, [id]);
+
+  const refreshAll = async () => {
+    await loadDocument();
+    await loadAuditLogs();
+  };
 
   const handleAssignReviewer = async () => {
     setErrorMessage("");
@@ -51,7 +68,7 @@ function DocumentDetailsPage() {
     try {
       const data = await assignReviewer(id, selectedReviewer, user.email);
       setSuccessMessage(data.message);
-      setDocument(data.document);
+      await refreshAll();
     } catch (error) {
       setErrorMessage(error.message);
     }
@@ -64,7 +81,7 @@ function DocumentDetailsPage() {
     try {
       const data = await approveDocument(id, user.email);
       setSuccessMessage(data.message);
-      setDocument(data.document);
+      await refreshAll();
     } catch (error) {
       setErrorMessage(error.message);
     }
@@ -77,8 +94,8 @@ function DocumentDetailsPage() {
     try {
       const data = await rejectDocument(id, user.email, rejectionNotes);
       setSuccessMessage(data.message);
-      setDocument(data.document);
       setRejectionNotes("");
+      await refreshAll();
     } catch (error) {
       setErrorMessage(error.message);
     }
@@ -93,6 +110,10 @@ function DocumentDetailsPage() {
     user.role === "Reviewer" &&
     document?.reviewer_email === user.email &&
     document?.status === "Pending";
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   if (!document) {
     return (
@@ -200,6 +221,41 @@ function DocumentDetailsPage() {
           {successMessage}
         </p>
       )}
+
+      <div style={{ marginTop: "32px" }}>
+        <h2 data-testid="audit-history-title">Audit History</h2>
+
+        {auditLogs.length > 0 ? (
+          <div data-testid="audit-history-list">
+            {auditLogs.map((log) => (
+              <div
+                key={log.id}
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "12px",
+                  marginBottom: "12px",
+                  borderRadius: "6px",
+                }}
+              >
+                <p>
+                  <strong>Action:</strong> {log.action}
+                </p>
+                <p>
+                  <strong>Actor:</strong> {log.actor_email}
+                </p>
+                <p>
+                  <strong>Notes:</strong> {log.notes || "-"}
+                </p>
+                <p>
+                  <strong>Time:</strong> {formatDate(log.created_at)}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p data-testid="no-audit-history">No audit history found.</p>
+        )}
+      </div>
     </div>
   );
 }
