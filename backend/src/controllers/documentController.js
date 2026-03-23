@@ -2,11 +2,22 @@ const pool = require("../config/db");
 
 const getAllDocuments = async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, title, file_name, status, owner_email, reviewer_email, version, created_at, updated_at
-       FROM documents
-       ORDER BY id DESC`
-    );
+    const { search } = req.query;
+
+    let query = `
+      SELECT id, title, file_name, status, owner_email, reviewer_email, version, created_at, updated_at
+      FROM documents
+    `;
+    const values = [];
+
+    if (search && search.trim() !== "") {
+      query += ` WHERE LOWER(title) LIKE LOWER($1) `;
+      values.push(`%${search.trim()}%`);
+    }
+
+    query += ` ORDER BY id DESC`;
+
+    const result = await pool.query(query, values);
 
     return res.status(200).json(result.rows);
   } catch (error) {

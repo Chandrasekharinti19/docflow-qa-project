@@ -1,5 +1,9 @@
-export async function fetchDocuments() {
-  const response = await fetch("http://localhost:5000/api/documents");
+export async function fetchDocuments(search = "") {
+  const url = search
+    ? `http://localhost:5000/api/documents?search=${encodeURIComponent(search)}`
+    : "http://localhost:5000/api/documents";
+
+  const response = await fetch(url);
   const data = await response.json();
 
   if (!response.ok) {
