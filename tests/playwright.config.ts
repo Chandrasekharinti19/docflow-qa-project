@@ -9,6 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   reporter: [["html"], ["list"]],
+  globalTeardown: "./global-teardown.ts",
   use: {
     baseURL: process.env.BASE_URL,
     headless: false,
