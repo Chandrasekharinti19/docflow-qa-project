@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchDocuments, createDocument } from "../services/documentService";
+import {
+  fetchDocuments,
+  createDocument,
+  getDocumentDownloadUrl,
+  deleteDocument,
+} from "../services/documentService";
 
 function DocumentsPage() {
   const navigate = useNavigate();
@@ -8,11 +13,19 @@ function DocumentsPage() {
 
   const [documents, setDocuments] = useState([]);
   const [title, setTitle] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const allowedExtensions = ["pdf", "docx", "xlsx", "jpg", "jpeg", "png", "zip"];
+  const maxFileSizeBytes = 10 * 1024 * 1024;
+
+  const getFileExtension = (name) => {
+    if (!name || !name.includes(".")) return "";
+    return name.split(".").pop().toLowerCase();
+  };
 
   const loadDocuments = async (search = "") => {
     try {
@@ -36,11 +49,37 @@ function DocumentsPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
+    if (!title.trim()) {
+      setErrorMessage("Document title is required");
+      return;
+    }
+
+    if (!selectedFile) {
+      setErrorMessage("Please select a file to upload");
+      return;
+    }
+
+    const extension = getFileExtension(selectedFile.name);
+
+    if (!allowedExtensions.includes(extension)) {
+      setErrorMessage(
+        "Invalid file type. Allowed: pdf, docx, xlsx, jpg, jpeg, png, zip"
+      );
+      return;
+    }
+
+    if (selectedFile.size > maxFileSizeBytes) {
+      setErrorMessage("File is too large. Maximum allowed size is 10 MB");
+      return;
+    }
+
     try {
-      const data = await createDocument(title, fileName, user.email);
+      const data = await createDocument(title.trim(), selectedFile, user.email);
       setSuccessMessage(data.message);
       setTitle("");
-      setFileName("");
+      setSelectedFile(null);
+      const fileInput = document.getElementById("document-file-input");
+      if (fileInput) fileInput.value = "";
       await loadDocuments(searchTerm);
     } catch (error) {
       setErrorMessage(error.message);
@@ -65,7 +104,22 @@ function DocumentsPage() {
     await loadDocuments("");
   };
 
+  const handleDeleteDocument = async (e, id) => {
+    e.stopPropagation();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const data = await deleteDocument(id, user.email);
+      setSuccessMessage(data.message);
+      await loadDocuments(searchTerm);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
   const canCreate = user.role === "Admin" || user.role === "Editor";
+  const canDelete = user.role === "Admin" || user.role === "Editor";
 
   return (
     <div style={{ padding: "24px", fontFamily: "Arial" }}>
@@ -86,7 +140,7 @@ function DocumentsPage() {
         <div style={{ marginTop: "24px", marginBottom: "24px" }}>
           <h2>Upload Document</h2>
 
-          <form onSubmit={handleCreateDocument} style={{ maxWidth: "400px" }}>
+          <form onSubmit={handleCreateDocument} style={{ maxWidth: "500px" }}>
             <div style={{ marginBottom: "12px" }}>
               <label>Document Title</label>
               <br />
@@ -100,19 +154,27 @@ function DocumentsPage() {
             </div>
 
             <div style={{ marginBottom: "12px" }}>
-              <label>File Name</label>
+              <label>Select File</label>
               <br />
               <input
                 data-testid="document-file-input"
-                type="text"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
+                id="document-file-input"
+                type="file"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 style={{ width: "100%", padding: "8px" }}
               />
+              <p style={{ fontSize: "14px", marginTop: "6px" }}>
+                Allowed types: pdf, docx, xlsx, jpg, jpeg, png, zip. Max size: 10 MB
+              </p>
+              {selectedFile && (
+                <p data-testid="selected-file-name" style={{ fontSize: "14px" }}>
+                  Selected: {selectedFile.name}
+                </p>
+              )}
             </div>
 
             <button data-testid="upload-document-button" type="submit">
-              Create Document
+              Upload Document
             </button>
           </form>
         </div>
@@ -188,10 +250,14 @@ function DocumentsPage() {
                 <th>ID</th>
                 <th>Title</th>
                 <th>File Name</th>
+                <th>Type</th>
+                <th>Size (bytes)</th>
                 <th>Status</th>
                 <th>Owner</th>
                 <th>Reviewer</th>
                 <th>Version</th>
+                <th>Open</th>
+                <th>Delete</th>
               </tr>
             </thead>
 
@@ -206,15 +272,48 @@ function DocumentsPage() {
                     <td>{doc.id}</td>
                     <td>{doc.title}</td>
                     <td>{doc.file_name}</td>
+                    <td>{doc.file_type || getFileExtension(doc.file_name) || "-"}</td>
+                    <td>{doc.file_size_bytes ?? "-"}</td>
                     <td>{doc.status}</td>
                     <td>{doc.owner_email}</td>
                     <td>{doc.reviewer_email || "-"}</td>
                     <td>{doc.version}</td>
+                    <td>
+                      <a
+                        href={getDocumentDownloadUrl(doc.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        data-testid={`open-document-${doc.id}`}
+                      >
+                        Open
+                      </a>
+                    </td>
+                    <td>
+                      {canDelete && doc.status === "Pending" ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteDocument(e, doc.id)}
+                          data-testid={`delete-document-${doc.id}`}
+                          title="Delete document"
+                          style={{
+                            cursor: "pointer",
+                            border: "none",
+                            background: "transparent",
+                            fontSize: "18px",
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" data-testid="no-documents-message">
+                  <td colSpan="11" data-testid="no-documents-message">
                     No documents found
                   </td>
                 </tr>

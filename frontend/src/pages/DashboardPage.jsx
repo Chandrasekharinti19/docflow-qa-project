@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 
 function DashboardPage() {
-  const user = JSON.parse(localStorage.getItem("docflowUser"));
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("docflowUser"));
 
   const handleLogout = () => {
     localStorage.removeItem("docflowUser");

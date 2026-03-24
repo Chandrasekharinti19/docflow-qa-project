@@ -42,6 +42,25 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.use((err, req, res, next) => {
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      message: "File is too large. Maximum allowed size is 10 MB",
+    });
+  }
+
+  if (err.message && err.message.includes("Unsupported file type")) {
+    return res.status(400).json({
+      message: err.message,
+    });
+  }
+
+  return res.status(500).json({
+    message: "Unexpected server error",
+    error: err.message,
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

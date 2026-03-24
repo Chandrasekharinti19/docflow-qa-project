@@ -1,0 +1,205 @@
+name: Playwright CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: docflow_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d docflow_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      CI: true
+
+      BASE_URL: http://127.0.0.1:4173
+      API_BASE_URL: http://127.0.0.1:5000
+
+      EDITOR_EMAIL: editor@test.com
+      REVIEWER_EMAIL: reviewer@test.com
+      VIEWER_EMAIL: viewer@test.com
+      ADMIN_EMAIL: admin@test.com
+      USER_PASSWORD: Password123
+
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: docflow_db
+
+      PORT: 5000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            tests/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: tests
+        run: npx playwright install --with-deps
+
+      - name: Create database schema
+        working-directory: backend
+        shell: bash
+        run: |
+          node <<'EOF'
+          const { Pool } = require('pg');
+
+          const pool = new Pool({
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT),
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+          });
+
+          (async () => {
+            await pool.query(`
+              CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                role VARCHAR(50) NOT NULL CHECK (role IN ('Admin', 'Editor', 'Reviewer', 'Viewer'))
+              );
+
+              CREATE TABLE IF NOT EXISTS documents (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                file_name VARCHAR(255) NOT NULL,
+                file_type VARCHAR(20),
+                status VARCHAR(50) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+                owner_email VARCHAR(150) NOT NULL,
+                reviewer_email VARCHAR(150),
+                version INT NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                original_file_name VARCHAR(255),
+                stored_file_name VARCHAR(255),
+                mime_type VARCHAR(150),
+                file_size_bytes INT,
+                storage_path TEXT
+              );
+
+              CREATE TABLE IF NOT EXISTS audit_logs (
+                id SERIAL PRIMARY KEY,
+                document_id INT NOT NULL,
+                action VARCHAR(100) NOT NULL,
+                actor_email VARCHAR(150) NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_document
+                  FOREIGN KEY(document_id)
+                  REFERENCES documents(id)
+                  ON DELETE CASCADE
+              );
+            `);
+
+            await pool.end();
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Seed users
+        working-directory: backend
+        run: npm run seed:users
+
+      - name: Start backend
+        working-directory: backend
+        shell: bash
+        run: |
+          mkdir -p uploads
+          nohup npm run dev > backend.log 2>&1 &
+
+      - name: Wait for backend
+        working-directory: tests
+        run: npx wait-on http://127.0.0.1:5000/health
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Start frontend preview
+        working-directory: frontend
+        shell: bash
+        run: |
+          nohup npm run preview -- --host 0.0.0.0 --port 4173 > frontend-preview.log 2>&1 &
+
+      - name: Wait for frontend
+        working-directory: tests
+        run: npx wait-on http://127.0.0.1:4173
+
+      - name: Run Playwright tests
+        working-directory: tests
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/playwright-report
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/test-results
+          retention-days: 7
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend/backend.log
+          retention-days: 7
+
+      - name: Upload frontend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-log
+          path: frontend/frontend-preview.log
+          retention-days: 7

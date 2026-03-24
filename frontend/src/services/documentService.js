@@ -13,19 +13,21 @@ export async function fetchDocuments(search = "") {
   return data;
 }
 
-export async function createDocument(title, fileName, ownerEmail) {
+export async function createDocument(title, file, ownerEmail) {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("ownerEmail", ownerEmail);
+  formData.append("file", file);
+
   const response = await fetch("http://localhost:5000/api/documents", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ title, fileName, ownerEmail }),
+    body: formData,
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Failed to create document");
+    throw new Error(data.message || "Failed to upload document");
   }
 
   return data;
@@ -116,6 +118,28 @@ export async function fetchDocumentAuditLogs(id) {
 
   if (!response.ok) {
     throw new Error(data.message || "Failed to fetch audit logs");
+  }
+
+  return data;
+}
+
+export function getDocumentDownloadUrl(id) {
+  return `http://localhost:5000/api/documents/${id}/download`;
+}
+
+export async function deleteDocument(id, actorEmail) {
+  const response = await fetch(`http://localhost:5000/api/documents/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ actorEmail }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to delete document");
   }
 
   return data;
