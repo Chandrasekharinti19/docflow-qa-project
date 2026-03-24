@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { LoginPage } from "../pages/LoginPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DocumentsPage } from "../pages/DocumentsPage";
@@ -23,7 +23,7 @@ test("editor assigns reviewer and reviewer approves document", async ({ page }) 
 
   // Create document
   await documentsPage.expectLoaded();
-  await documentsPage.createDocument(uniqueTitle, fileName);
+  await documentsPage.createDocument(uniqueTitle, "fixtures/sample.pdf");
   await documentsPage.expectSuccessMessage();
 
   // Search and open document
@@ -34,7 +34,13 @@ test("editor assigns reviewer and reviewer approves document", async ({ page }) 
   // Assign reviewer
   await documentDetailsPage.expectLoaded();
   await documentDetailsPage.assignReviewer(users.reviewer.email);
-  await documentDetailsPage.expectReviewer(users.reviewer.email);
+
+  // wait until backend update reflects in UI
+  await expect
+  .poll(async () => {
+    return await page.getByTestId("document-reviewer").textContent();
+  })
+  .toContain(users.reviewer.email);
   await documentDetailsPage.expectAuditAction("REVIEWER_ASSIGNED");
 
   // Logout as editor

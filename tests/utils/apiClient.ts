@@ -1,22 +1,81 @@
 import { APIRequestContext, expect } from "@playwright/test";
 import dotenv from "dotenv";
+import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
 const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:5000";
 
+function getMimeType(filePath: string) {
+  const ext = path.extname(filePath).toLowerCase();
+
+  switch (ext) {
+    case ".pdf":
+      return "application/pdf";
+    case ".docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case ".xlsx":
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".zip":
+      return "application/zip";
+    case ".txt":
+      return "text/plain";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 export async function createDocumentApi(
   request: APIRequestContext,
   title: string,
-  fileName: string,
+  filePath: string,
   ownerEmail: string
 ) {
+  const resolvedPath = path.resolve(filePath);
+
   const response = await request.post(`${apiBaseUrl}/api/documents`, {
-    data: { title, fileName, ownerEmail },
+    multipart: {
+      title,
+      ownerEmail,
+      file: {
+        name: path.basename(resolvedPath),
+        mimeType: getMimeType(resolvedPath),
+        buffer: fs.readFileSync(resolvedPath),
+      },
+    },
   });
 
   expect(response.ok()).toBeTruthy();
   return response.json();
+}
+
+export async function createDocumentApiExpectFailure(
+  request: APIRequestContext,
+  title: string,
+  filePath: string,
+  ownerEmail: string
+) {
+  const resolvedPath = path.resolve(filePath);
+
+  const response = await request.post(`${apiBaseUrl}/api/documents`, {
+    multipart: {
+      title,
+      ownerEmail,
+      file: {
+        name: path.basename(resolvedPath),
+        mimeType: getMimeType(resolvedPath),
+        buffer: fs.readFileSync(resolvedPath),
+      },
+    },
+  });
+
+  return response;
 }
 
 export async function fetchDocumentsApi(request: APIRequestContext, search = "") {
@@ -89,4 +148,20 @@ export async function fetchAuditLogsApi(
 
   expect(response.ok()).toBeTruthy();
   return response.json();
+}
+
+export async function deleteDocumentApi(
+  request,
+  id: number,
+  actorEmail: string
+) {
+  const response = await request.delete(
+    `${apiBaseUrl}/api/documents/${id}`,
+    {
+      data: { actorEmail },
+    }
+  );
+
+  const data = await response.json();
+  return { response, data };
 }

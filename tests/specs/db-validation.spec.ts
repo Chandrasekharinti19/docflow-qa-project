@@ -9,12 +9,11 @@ import { users } from "../utils/testData";
 
 test("DB validation: document and audit logs are updated correctly", async ({ request }) => {
   const uniqueTitle = `DB Validation Document ${Date.now()}`;
-  const fileName = `db-validation-${Date.now()}.pdf`;
 
   const created = await createDocumentApi(
     request,
     uniqueTitle,
-    fileName,
+    "fixtures/sample.pdf",
     users.editor.email
   );
 
