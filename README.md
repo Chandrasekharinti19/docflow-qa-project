@@ -1,4 +1,4 @@
-\# DocFlow QA Automation Project
+# DocFlow QA Automation Project
 
 
 
@@ -10,11 +10,11 @@ Instead of just focusing on UI automation, I wanted this to reflect how testing 
 
 
 
-\---
+---
 
 
 
-\## What this project does
+## What this project does
 
 
 
@@ -22,17 +22,17 @@ At a high level, this app simulates a document workflow:
 
 
 
-\* Upload documents (PDF, DOCX, images, etc.)
+* Upload documents (PDF, DOCX, images, etc.)
 
-\* Assign a reviewer
+* Assign a reviewer
 
-\* Approve or reject documents
+* Approve or reject documents
 
-\* Track all actions in audit logs
+* Track all actions in audit logs
 
-\* Enforce role-based access (Editor, Reviewer, Viewer)
+* Enforce role-based access (Editor, Reviewer, Viewer)
 
-\* Download and delete documents with proper restrictions
+* Download and delete documents with proper restrictions
 
 
 
@@ -40,11 +40,11 @@ The goal wasn’t just to build the app, but to \*\*test the entire lifecycle en
 
 
 
-\---
+---
 
 
 
-\## Why I built this
+## Why I built this
 
 
 
@@ -56,129 +56,127 @@ You deal with:
 
 
 
-\* API validation
+* API validation
 
-\* database checks
+* database checks
 
-\* async issues
+* async issues
 
-\* file uploads/downloads
+* file uploads/downloads
 
-\* role-based workflows
+* role-based workflows
 
 
 
-\---
+---
 
 
+## Tech stack
 
-\## Tech stack
 
 
+* Frontend: React (Vite)
 
-\* Frontend: React (Vite)
+* Backend: Node.js + Express
 
-\* Backend: Node.js + Express
+* Database: PostgreSQL
 
-\* Database: PostgreSQL
+* Automation: Playwright
 
-\* Automation: Playwright
+* CI/CD: GitHub Actions
 
-\* CI/CD: GitHub Actions
 
 
+---
 
-\---
 
 
+## What I automated
 
-\## What I automated
 
 
+### UI (Playwright)
 
-\### UI (Playwright)
 
 
+* Full workflow: upload → assign reviewer → approve
 
-\* Full workflow: upload → assign reviewer → approve
+* File upload using real files (not mocks)
 
-\* File upload using real files (not mocks)
+* File download validation
 
-\* File download validation
+* Role-based UI behavior (Editor vs Viewer vs Reviewer)
 
-\* Role-based UI behavior (Editor vs Viewer vs Reviewer)
+* Negative cases (invalid file type, large file)
 
-\* Negative cases (invalid file type, large file)
+* Delete flow (only allowed for pending documents)
 
-\* Delete flow (only allowed for pending documents)
 
 
+### API
 
-\### API
 
 
+* Document creation (multipart upload)
 
-\* Document creation (multipart upload)
+* Reviewer assignment
 
-\* Reviewer assignment
+* Approval/rejection
 
-\* Approval/rejection
+* Delete validation (pending vs approved)
 
-\* Delete validation (pending vs approved)
+* Negative scenarios
 
-\* Negative scenarios
 
 
+### Database
 
-\### Database
 
 
+* Verified document status after operations
 
-\* Verified document status after operations
+* Checked audit logs for correct actions
 
-\* Checked audit logs for correct actions
+* Ensured data consistency across flows
 
-\* Ensured data consistency across flows
 
 
+---
 
-\---
 
 
+## Key features I focused on
 
-\## Key features I focused on
 
 
+### File handling (realistic scenario)
 
-\### File handling (realistic scenario)
 
 
+* Multipart file upload
 
-\* Multipart file upload
+* MIME type + extension validation
 
-\* MIME type + extension validation
+* File size restriction (10MB)
 
-\* File size restriction (10MB)
+* Download support
 
-\* Download support
+* Deletion with constraints
 
-\* Deletion with constraints
 
+### Workflow logic
 
 
-\### Workflow logic
 
+* Reviewer must be assigned before approval
 
+* Only the assigned reviewer can approve/reject
 
-\* Reviewer must be assigned before approval
+* Only pending documents can be deleted
 
-\* Only the assigned reviewer can approve/reject
 
-\* Only pending documents can be deleted
 
-
-
-\### Audit logs
+### Audit logs
 
 
 
@@ -186,21 +184,21 @@ Every important action is tracked:
 
 
 
-\* REVIEWER\_ASSIGNED
+* REVIEWER\_ASSIGNED
 
-\* APPROVED
+* APPROVED
 
-\* REJECTED
+* REJECTED
 
-\* DOCUMENT\_DELETED
-
-
-
-\---
+* DOCUMENT\_DELETED
 
 
 
-\## Project structure
+---
+
+
+
+## Project structure
 
 
 
@@ -228,15 +226,15 @@ docflow-qa-project/
 
 
 
-\---
+---
 
 
 
-\## How to run locally
+## How to run locally
 
 
 
-\### Backend
+### Backend
 
 
 
@@ -252,7 +250,7 @@ npm run dev
 
 
 
-\### Frontend
+### Frontend
 
 
 
@@ -268,7 +266,7 @@ npm run dev
 
 
 
-\### Tests
+### Tests
 
 
 
@@ -286,11 +284,11 @@ npx playwright test
 
 
 
-\---
+---
 
 
 
-\## CI (GitHub Actions)
+## CI (GitHub Actions)
 
 
 
@@ -298,13 +296,13 @@ The project includes a CI pipeline that:
 
 
 
-\* Spins up PostgreSQL
+* Spins up PostgreSQL
 
-\* Starts backend + frontend
+* Starts backend + frontend
 
-\* Runs Playwright tests
+* Runs Playwright tests
 
-\* Uploads test reports and logs
+* Uploads test reports and logs
 
 
 
@@ -312,53 +310,53 @@ This helped me validate that everything works in a clean environment, not just l
 
 
 
-\---
+---
 
 
 
-\## Things I learned/focused on
+## Things I learned/focused on
 
 
 
-\* Handling file uploads in automation (multipart testing)
+* Handling file uploads in automation (multipart testing)
 
-\* Dealing with async UI updates (used polling where needed)
+* Dealing with async UI updates (used polling where needed)
 
-\* Keeping UI, API, and DB tests aligned
+* Keeping UI, API, and DB tests aligned
 
-\* Designing reusable page objects (POM)
+* Designing reusable page objects (POM)
 
-\* Writing meaningful negative test cases
+* Writing meaningful negative test cases
 
-\* Making tests stable enough for CI
-
-
-
-\---
+* Making tests stable enough for CI
 
 
 
-\## What I would improve next
+---
 
 
 
-\* Add proper authentication (JWT instead of passing emails)
-
-\* Introduce soft delete instead of hard delete
-
-\* Add performance testing (API load scenarios)
-
-\* Improve test parallelization in CI
-
-\* Add more security-focused test cases
+## What I would improve next
 
 
 
-\---
+* Add proper authentication (JWT instead of passing emails)
+
+* Introduce soft delete instead of hard delete
+
+* Add performance testing (API load scenarios)
+
+* Improve test parallelization in CI
+
+* Add more security-focused test cases
 
 
 
-\## Author
+---
+
+
+
+## Author
 
 
 
