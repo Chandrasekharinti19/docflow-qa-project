@@ -502,7 +502,7 @@ jobs:
 
       - name: Run DB validation tests
         working-directory: tests
-        run: npx playwright test specs/db-validation.spec.ts
+        run: npx playwright test specs/db-validation.spec.ts --workers=1
 
       - name: Upload DB report
         if: always()

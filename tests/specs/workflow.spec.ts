@@ -35,12 +35,14 @@ test("editor assigns reviewer and reviewer approves document", async ({ page }) 
   await documentDetailsPage.expectLoaded();
   await documentDetailsPage.assignReviewer(users.reviewer.email);
 
-  // wait until backend update reflects in UI
-  await expect
-  .poll(async () => {
-    return await page.getByTestId("document-reviewer").textContent();
-  })
-  .toContain(users.reviewer.email);
+  //  force UI refresh (important for CI)
+  await page.reload();
+
+  // wait for reviewer to appear
+  await expect(page.getByTestId("document-reviewer")).toContainText(
+    users.reviewer.email
+   );
+
   await documentDetailsPage.expectAuditAction("REVIEWER_ASSIGNED");
 
   // Logout as editor

@@ -51,8 +51,11 @@ export async function createDocumentApi(
     },
   });
 
-  expect(response.ok()).toBeTruthy();
-  return response.json();
+  const body = await response.text();
+
+  expect(response.ok(), `createDocumentApi failed: ${response.status()} ${body}`).toBeTruthy();
+
+  return JSON.parse(body);  
 }
 
 export async function createDocumentApiExpectFailure(
@@ -101,8 +104,11 @@ export async function assignReviewerApi(
     }
   );
 
-  expect(response.ok()).toBeTruthy();
-  return response.json();
+  const body = await response.text();
+
+  expect(response.ok(), `assignReviewerApi failed: ${response.status()} ${body}`).toBeTruthy();
+
+  return JSON.parse(body);
 }
 
 export async function approveDocumentApi(
@@ -117,8 +123,11 @@ export async function approveDocumentApi(
     }
   );
 
-  expect(response.ok()).toBeTruthy();
-  return response.json();
+  const body = await response.text();
+
+  expect(response.ok(), `approveDocumentApi failed: ${response.status()} ${body}`).toBeTruthy();
+
+  return JSON.parse(body);
 }
 
 export async function rejectDocumentApi(
@@ -151,7 +160,7 @@ export async function fetchAuditLogsApi(
 }
 
 export async function deleteDocumentApi(
-  request,
+  request: APIRequestContext,
   id: number,
   actorEmail: string
 ) {
@@ -162,6 +171,9 @@ export async function deleteDocumentApi(
     }
   );
 
-  const data = await response.json();
-  return { response, data };
+  const body = await response.text();
+
+  expect(response.ok(), `deleteDocumentApi failed: ${response.status()} ${body}`).toBeTruthy();
+
+  return JSON.parse(body);
 }

@@ -44,7 +44,7 @@ test("DB validation: document and audit logs are updated correctly", async ({ re
   expect(documentRows[0].owner_email).toBe(users.editor.email);
   expect(documentRows[0].reviewer_email).toBe(users.reviewer.email);
 
-  const auditRows = await queryDb(
+  const auditRows: { action: string; actor_email: string; notes: string | null }[] = await queryDb(
     `
       SELECT action, actor_email, notes
       FROM audit_logs
@@ -59,7 +59,7 @@ test("DB validation: document and audit logs are updated correctly", async ({ re
   expect(actions).toContain("APPROVED");
 
   const approvalRow = auditRows.find((row) => row.action === "APPROVED");
-  expect(approvalRow.actor_email).toBe(users.reviewer.email);
+  expect(approvalRow!.actor_email).toBe(users.reviewer.email);
 });
 
 test("DB validation: soft deleted document remains in DB with deleted flags", async ({ request }) => {
@@ -97,7 +97,7 @@ test("DB validation: soft deleted document remains in DB with deleted flags", as
   expect(documentRows[0].deleted_at).toBeTruthy();
   expect(documentRows[0].deleted_by).toBe(users.editor.email);
 
-  const auditRows = await queryDb(
+  const auditRows: { action: string; actor_email: string; notes: string | null }[] = await queryDb(
     `
       SELECT action, actor_email, notes
       FROM audit_logs
@@ -112,5 +112,5 @@ test("DB validation: soft deleted document remains in DB with deleted flags", as
   );
 
   expect(softDeleteRow).toBeTruthy();
-  expect(softDeleteRow.actor_email).toBe(users.editor.email);
+  expect(softDeleteRow!.actor_email).toBe(users.editor.email);
 });

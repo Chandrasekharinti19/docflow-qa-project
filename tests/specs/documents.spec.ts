@@ -152,6 +152,11 @@ test("approved document does not show delete button", async ({ page }) => {
   // assign reviewer
   await page.getByTestId("reviewer-select").selectOption(users.reviewer.email);
   await page.getByTestId("assign-reviewer-button").click();
+  await page.reload();
+
+  await expect(page.getByTestId("document-reviewer")).toContainText(
+    users.reviewer.email
+  );
 
   await page.goto("/dashboard");
   await dashboardPage.logout();
