@@ -1,370 +1,250 @@
 # DocFlow QA Automation Project
 
+This project is a full-stack document workflow system that I built to practice and demonstrate real-world QA and automation practices.
 
-
-This project is a full-stack document workflow system that I built mainly to demonstrate real-world QA and automation practices.
-
-
-
-Instead of just focusing on UI automation, I wanted this to reflect how testing actually works in production, covering UI, APIs, database validation, and CI integration in one place.
-
-
+Instead of just focusing on UI automation, I wanted this to reflect how testing actually works in production—covering UI, APIs, database validation, performance checks, and CI integration.
 
 ---
-
-
 
 ## What this project does
 
+The app simulates a typical document lifecycle:
 
-
-At a high level, this app simulates a document workflow:
-
-
-
-* Upload documents (PDF, DOCX, images, etc.)
-
+* Upload documents (PDF, DOCX, images, ZIP, etc.)
 * Assign a reviewer
-
 * Approve or reject documents
+* Track all actions through audit logs
+* Role-based access (Editor, Reviewer, Viewer, Admin)
+* Download documents
+* Delete documents (soft delete with restrictions)
 
-* Track all actions in audit logs
-
-* Enforce role-based access (Editor, Reviewer, Viewer)
-
-* Download and delete documents with proper restrictions
-
-
-
-The goal wasn’t just to build the app, but to \*\*test the entire lifecycle end-to-end\*\*.
-
-
+The main focus is validating the **entire workflow end-to-end**, not just individual pieces.
 
 ---
-
-
 
 ## Why I built this
 
+In real QA roles, testing goes beyond clicking UI elements. You deal with:
 
-
-In most real QA roles, testing is not limited to just UI clicks.
-
-
-
-You deal with:
-
-
-
-* API validation
-
-* database checks
-
-* async issues
-
+* APIs
+* databases
+* async behavior
 * file uploads/downloads
+* workflow rules
+* performance considerations
 
-* role-based workflows
-
-
+So I built this project to bring all of that into one place.
 
 ---
-
 
 ## Tech stack
 
-
-
 * Frontend: React (Vite)
-
 * Backend: Node.js + Express
-
 * Database: PostgreSQL
-
 * Automation: Playwright
-
+* Performance Testing: k6
 * CI/CD: GitHub Actions
 
-
-
 ---
-
-
 
 ## What I automated
 
-
-
 ### UI (Playwright)
 
-
-
-* Full workflow: upload → assign reviewer → approve
-
-* File upload using real files (not mocks)
-
+* Full workflow: upload → assign reviewer → approve/reject
+* File upload using real files (multipart)
 * File download validation
+* Role-based UI checks
+* Delete flow (only for pending documents)
+* Negative scenarios (invalid file type, large file)
+* Handling async UI updates using polling where needed
 
-* Role-based UI behavior (Editor vs Viewer vs Reviewer)
-
-* Negative cases (invalid file type, large file)
-
-* Delete flow (only allowed for pending documents)
-
-
+---
 
 ### API
 
-
-
 * Document creation (multipart upload)
-
 * Reviewer assignment
-
-* Approval/rejection
-
-* Delete validation (pending vs approved)
-
-* Negative scenarios
-
-
-
-### Database
-
-
-
-* Verified document status after operations
-
-* Checked audit logs for correct actions
-
-* Ensured data consistency across flows
-
-
+* Approval / rejection
+* Soft delete validation
+* Negative scenarios (invalid state, invalid inputs)
 
 ---
 
+### Database validation
 
+* Verified document status after operations
+* Confirmed soft delete flags (`is_deleted`, `deleted_at`, `deleted_by`)
+* Validated audit log entries for each action
+
+---
+
+### Performance testing (k6)
+
+Added lightweight load tests for core APIs:
+
+* document listing
+* document search
+
+Focus:
+
+* response time thresholds (p95)
+* failure rate validation
+
+---
 
 ## Key features I focused on
 
+### File handling (real-world scenario)
 
+* Multipart upload
+* File type validation (extension + MIME)
+* Size restriction (10MB)
+* File download support
 
-### File handling (realistic scenario)
+---
 
-
-
-* Multipart file upload
-
-* MIME type + extension validation
-
-* File size restriction (10MB)
-
-* Download support
-
-* Deletion with constraints
-
-
-### Workflow logic
-
-
+### Workflow rules
 
 * Reviewer must be assigned before approval
-
-* Only the assigned reviewer can approve/reject
-
+* Only assigned reviewer can approve/reject
 * Only pending documents can be deleted
 
+---
 
+### Soft delete (important improvement)
 
-### Audit logs
+Instead of physically deleting records:
 
+* Documents are marked with:
 
+  * `is_deleted = true`
+  * `deleted_at`
+  * `deleted_by`
+* Hidden from UI and API responses
+* Audit logs are preserved
+* Files remain available for traceability
+
+This better reflects how real systems handle deletion.
+
+---
+
+### Audit logging
 
 Every important action is tracked:
 
-
-
-* REVIEWER\_ASSIGNED
-
+* REVIEWER_ASSIGNED
 * APPROVED
-
 * REJECTED
-
-* DOCUMENT\_DELETED
-
-
+* DOCUMENT_SOFT_DELETED
 
 ---
-
-
 
 ## Project structure
 
-
-
-```
-
+```id="l8c0n3"
 docflow-qa-project/
-
 ├── backend/
-
 ├── frontend/
-
 ├── tests/
-
 │   ├── specs/
-
 │   ├── pages/
-
 │   ├── utils/
-
 │   └── fixtures/
-
+├── performance/
 └── .github/workflows/
-
 ```
-
-
 
 ---
-
-
 
 ## How to run locally
 
-
-
 ### Backend
 
-
-
-```
-
+```bash id="2m9h8s"
 cd backend
-
 npm install
-
 npm run dev
-
 ```
-
-
 
 ### Frontend
 
-
-
-```
-
+```bash id="e2o3b5"
 cd frontend
-
 npm install
-
 npm run dev
-
 ```
-
-
 
 ### Tests
 
-
-
-```
-
+```bash id="a4k9s1"
 cd tests
-
 npm install
-
 npx playwright install
-
 npx playwright test
-
 ```
-
-
 
 ---
 
+## Running performance tests
 
+```bash id="7f3xk2"
+k6 run performance/document-list.js
+k6 run performance/document-search.js
+```
+
+---
 
 ## CI (GitHub Actions)
 
+The pipeline is split into separate jobs:
 
+* UI tests
+* API tests
+* DB validation tests
 
-The project includes a CI pipeline that:
+Each job:
 
+* starts PostgreSQL
+* runs backend
+* builds frontend (for UI tests)
+* executes Playwright tests
 
+This setup improves:
 
-* Spins up PostgreSQL
-
-* Starts backend + frontend
-
-* Runs Playwright tests
-
-* Uploads test reports and logs
-
-
-
-This helped me validate that everything works in a clean environment, not just locally.
-
-
+* failure isolation
+* execution speed
+* debugging
 
 ---
 
-
-
-## Things I learned/focused on
-
-
-
-* Handling file uploads in automation (multipart testing)
-
-* Dealing with async UI updates (used polling where needed)
+## Things I focused on while building this
 
 * Keeping UI, API, and DB tests aligned
-
-* Designing reusable page objects (POM)
-
+* Handling async UI behavior properly
 * Writing meaningful negative test cases
-
 * Making tests stable enough for CI
-
-
+* Designing reusable page objects
+* Testing real-world scenarios like file uploads and workflow rules
 
 ---
-
-
 
 ## What I would improve next
 
-
-
 * Add proper authentication (JWT instead of passing emails)
-
-* Introduce soft delete instead of hard delete
-
-* Add performance testing (API load scenarios)
-
-* Improve test parallelization in CI
-
-* Add more security-focused test cases
-
-
+* Introduce document versioning logic
+* Add soft delete recovery (restore)
+* Add performance testing for write APIs
+* Improve CI caching and job reuse
 
 ---
 
-
-
 ## Author
 
-
-
 Chandrasekhar Inti
-
 QA Engineer / SDET
 
+---
 
-
-
-
+This project reflects how I approach testing in real systems—looking at quality from UI, API, database, and system behavior, not just one layer.

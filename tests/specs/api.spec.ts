@@ -105,6 +105,11 @@ test("API: editor can delete pending document", async ({ request }) => {
 
   expect(response.status()).toBe(200);
   expect(data.message).toBe("Document deleted successfully");
+
+  // verify deleted document is hidden from normal fetch
+  const documents = await fetchDocumentsApi(request, uniqueTitle);
+  const matched = documents.find((doc: { id: number }) => doc.id === documentId);
+  expect(matched).toBeFalsy();
 });
 
 test("API: cannot delete approved document", async ({ request }) => {

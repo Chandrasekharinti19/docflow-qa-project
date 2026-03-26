@@ -8,13 +8,14 @@ const getAllDocuments = async (req, res) => {
 
     let query = `
       SELECT id, title, file_name, file_type, file_size_bytes, status, owner_email, reviewer_email, version, created_at, updated_at,
-             original_file_name, stored_file_name, mime_type, storage_path
+             original_file_name, stored_file_name, mime_type, storage_path, is_deleted, deleted_at, deleted_by
       FROM documents
+      WHERE is_deleted = FALSE
     `;
     const values = [];
 
     if (search && search.trim() !== "") {
-      query += ` WHERE LOWER(title) LIKE LOWER($1) `;
+      query += ` AND LOWER(title) LIKE LOWER($1) `;
       values.push(`%${search.trim()}%`);
     }
 
@@ -105,9 +106,9 @@ const getDocumentById = async (req, res) => {
 
     const result = await pool.query(
       `SELECT id, title, file_name, file_type, file_size_bytes, status, owner_email, reviewer_email, version, created_at, updated_at,
-              original_file_name, stored_file_name, mime_type, storage_path
+              original_file_name, stored_file_name, mime_type, storage_path, is_deleted, deleted_at, deleted_by
        FROM documents
-       WHERE id = $1`,
+       WHERE id = $1 AND is_deleted = FALSE`,
       [id]
     );
 
@@ -169,7 +170,7 @@ const assignReviewer = async (req, res) => {
     }
 
     const existingDocument = await pool.query(
-      `SELECT id, status FROM documents WHERE id = $1`,
+      `SELECT id, status, is_deleted FROM documents WHERE id = $1`,
       [id]
     );
 
@@ -182,6 +183,9 @@ const assignReviewer = async (req, res) => {
         message: `Reviewer can only be assigned to pending documents. Current status: ${existingDocument.rows[0].status}`,
       });
     }
+    if (document.is_deleted) {
+	  return res.status(400).json({ message: "Deleted documents cannot be approved" });
+	}
 
     const documentResult = await pool.query(
       `UPDATE documents
@@ -287,7 +291,7 @@ const rejectDocument = async (req, res) => {
     }
 
     const documentCheck = await pool.query(
-      `SELECT id, status, reviewer_email
+      `SELECT id, status, reviewer_email, is_deleted
        FROM documents
        WHERE id = $1`,
       [id]
@@ -315,6 +319,10 @@ const rejectDocument = async (req, res) => {
       return res.status(400).json({
         message: `Only pending documents can be rejected. Current status: ${document.status}`,
       });
+    }
+    
+    if (document.is_deleted) {
+  	return res.status(400).json({ message: "Deleted documents cannot be rejected" });	
     }
 
     const result = await pool.query(
@@ -379,9 +387,9 @@ const downloadDocumentFile = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT id, original_file_name, stored_file_name, storage_path
-       FROM documents
-       WHERE id = $1`,
+      `SELECT id, original_file_name, stored_file_name, storage_path, is_deleted
+   FROM documents
+   WHERE id = $1 AND is_deleted = FALSE`,
       [id]
     );
 
@@ -414,7 +422,7 @@ const deleteDocument = async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, title, status, owner_email, storage_path
+      `SELECT id, title, status, owner_email, is_deleted
        FROM documents
        WHERE id = $1`,
       [id]
@@ -426,6 +434,10 @@ const deleteDocument = async (req, res) => {
 
     const document = result.rows[0];
 
+    if (document.is_deleted) {
+      return res.status(400).json({ message: "Document is already deleted" });
+    }
+
     if (document.status !== "Pending") {
       return res.status(400).json({
         message: `Only pending documents can be deleted. Current status: ${document.status}`,
@@ -433,16 +445,20 @@ const deleteDocument = async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO audit_logs (document_id, action, actor_email, notes)
-       VALUES ($1, $2, $3, $4)`,
-      [id, "DOCUMENT_DELETED", actorEmail, `Deleted document: ${document.title}`]
+      `UPDATE documents
+       SET is_deleted = TRUE,
+           deleted_at = CURRENT_TIMESTAMP,
+           deleted_by = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [actorEmail, id]
     );
 
-    await pool.query(`DELETE FROM documents WHERE id = $1`, [id]);
-
-    if (document.storage_path && fs.existsSync(document.storage_path)) {
-      fs.unlinkSync(document.storage_path);
-    }
+    await pool.query(
+      `INSERT INTO audit_logs (document_id, action, actor_email, notes)
+       VALUES ($1, $2, $3, $4)`,
+      [id, "DOCUMENT_SOFT_DELETED", actorEmail, `Soft deleted document: ${document.title}`]
+    );
 
     return res.status(200).json({
       message: "Document deleted successfully",
