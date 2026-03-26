@@ -2,7 +2,7 @@
 
 This project is a full-stack document workflow system that I built to practice and demonstrate real-world QA and automation practices.
 
-Instead of just focusing on UI automation, I wanted this to reflect how testing actually works in production—covering UI, APIs, database validation, performance checks, and CI integration.
+Instead of just focusing on UI automation, I wanted this to reflect how testing actually works in production,covering UI, APIs, database validation, performance checks, and CI integration.
 
 ---
 
@@ -33,7 +33,6 @@ In real QA roles, testing goes beyond clicking UI elements. You deal with:
 * workflow rules
 * performance considerations
 
-So I built this project to bring all of that into one place.
 
 ---
 
@@ -244,7 +243,3 @@ This setup improves:
 
 Chandrasekhar Inti
 QA Engineer / SDET
-
----
-
-This project reflects how I approach testing in real systems—looking at quality from UI, API, database, and system behavior, not just one layer.
